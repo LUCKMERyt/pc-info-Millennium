@@ -1,0 +1,4 @@
+backend/pc-info.log
+backend/stop.flag
+*.zip
+node_modules/
