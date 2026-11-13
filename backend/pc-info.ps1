@@ -64,20 +64,36 @@ public static class DefaultAudio {
     $cpu = ("{0} ({1}C/{2}T)" -f ($cpuO.Name -replace '\s+', ' ').Trim(), $cpuO.NumberOfCores, $cpuO.NumberOfLogicalProcessors)
     $ramGB = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
 
-    # GPU: real VRAM from registry (WMI AdapterRAM is capped at 4 GB)
-    $gpuName = ""; $gpuBest = -1
+    # GPU: real VRAM. WMI AdapterRAM is capped at 4 GB, so use nvidia-smi (NVIDIA) or the registry (qword value)
+    $gpuName = ""; $gpuBest = [int64]-1; $gpuMem = [int64]0
     $classKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11cd-bfc1-08002be10318}"
     foreach ($k in (Get-ChildItem $classKey -ErrorAction SilentlyContinue)) {
         $p = Get-ItemProperty $k.PSPath -ErrorAction SilentlyContinue
         if (-not $p -or -not $p.DriverDesc) { continue }
         if ($p.DriverDesc -match 'Basic|Remote|Virtual|Mirror') { continue }
-        $mem = 0
+        $mem = [int64]0
         $q = $p.'HardwareInformation.qwMemorySize'
-        if ($q -is [byte[]]) { $mem = [BitConverter]::ToUInt64($q, 0) } elseif ($q) { $mem = [uint64]$q }
+        if ($q -is [byte[]]) { $mem = [BitConverter]::ToInt64($q, 0) } elseif ($q) { $mem = [int64]$q }
+        if ($mem -eq 0) {
+            $q2 = $p.'HardwareInformation.MemorySize'
+            if ($q2 -is [byte[]]) { $mem = [int64][BitConverter]::ToUInt32($q2, 0) } elseif ($q2) { $mem = [int64]$q2 }
+        }
         if ($mem -gt $gpuBest) { $gpuBest = $mem; $gpuName = $p.DriverDesc; $gpuMem = $mem }
     }
     $vc = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -notmatch 'Basic|Remote|Virtual' } | Select-Object -First 1
     if ($gpuName -eq "" -and $vc) { $gpuName = $vc.Name; $gpuMem = $vc.AdapterRAM }
+    # NVIDIA: nvidia-smi reports the exact amount (MiB)
+    if ($gpuName -match 'NVIDIA|GeForce') {
+        foreach ($exe in @("nvidia-smi", (Join-Path $env:SystemRoot "System32\nvidia-smi.exe"), (Join-Path $env:ProgramFiles "NVIDIA Corporation\NVSMI\nvidia-smi.exe"))) {
+            try {
+                $o = & $exe --query-gpu=memory.total --format=csv,noheader,nounits 2>$null
+                if ($o) {
+                    $mib = 0.0
+                    if ([double]::TryParse((@($o)[0]).ToString().Trim(), [ref]$mib) -and $mib -gt 0) { $gpuMem = [int64]($mib * 1MB); break }
+                }
+            } catch { }
+        }
+    }
     $gpu = $gpuName
     if ($gpuMem -gt 0) { $gpu = "{0} {1} GB" -f $gpuName, [math]::Round($gpuMem / 1GB) }
 
