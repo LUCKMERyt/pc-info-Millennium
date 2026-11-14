@@ -91,6 +91,7 @@ local ALLOWED_HOSTS = {
     ["fpsbench.com"] = true, ["www.fpsbench.com"] = true,
     ["chipversus.com"] = true, ["www.chipversus.com"] = true,
     ["checkfps.io"] = true, ["www.checkfps.io"] = true,
+    ["www.pcgamingwiki.com"] = true, ["pcgamingwiki.com"] = true,
 }
 local UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 local MAX_TEXT = 100000

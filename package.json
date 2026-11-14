@@ -1,11 +1,20 @@
 {
   "name": "pc-info",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Millennium plugin: PC configuration block on Steam store pages",
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "https://github.com/LUCKMERyt/pc-info-Millennium"
   },
-  "author": "LUCKMERyt"
+  "author": "LUCKMERyt",
+  "scripts": {
+    "build": "python3 src/build.py",
+    "test": "node --test \"src/tests/unit/*.test.js\" \"src/tests/e2e/*.test.js\"",
+    "test:unit": "node --test \"src/tests/unit/*.test.js\"",
+    "test:e2e": "node --test --test-concurrency=1 \"src/tests/e2e/*.test.js\""
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
 }

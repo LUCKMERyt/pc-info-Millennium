@@ -134,10 +134,28 @@ public static class DefaultAudio {
         $disks += @{ id = $d.DeviceID; free = [math]::Round($d.FreeSpace / 1GB); total = [math]::Round($d.Size / 1GB); model = $model; type = $dtype }
     }
 
+    # RAM modules: type, rated speed, real (configured) speed, count
+    $mem = $null
+    try {
+        $mods = @(Get-CimInstance Win32_PhysicalMemory)
+        if ($mods.Count -gt 0) {
+            $m0 = $mods[0]
+            $tcode = [int]$m0.SMBIOSMemoryType
+            $mtype = ""
+            if ($tcode -eq 34) { $mtype = "DDR5" } elseif ($tcode -eq 26) { $mtype = "DDR4" } elseif ($tcode -eq 24) { $mtype = "DDR3" } elseif ($tcode -eq 35) { $mtype = "LPDDR5" } elseif ($tcode -eq 30) { $mtype = "LPDDR4" }
+            $rated = 0; $conf = 0
+            foreach ($m in $mods) {
+                if ([int]$m.Speed -gt $rated) { $rated = [int]$m.Speed }
+                if ([int]$m.ConfiguredClockSpeed -gt $conf) { $conf = [int]$m.ConfiguredClockSpeed }
+            }
+            $mem = @{ type = $mtype; rated = $rated; conf = $conf; count = $mods.Count }
+        }
+    } catch { }
+
     $audio = [DefaultAudio]::GetDefaultName()
     if (-not $audio) { $audio = "n/a" }
 
-    $data = @{ os = $osName; cpu = $cpu; ramGB = $ramGB; gpu = $gpu; directx = $dx; board = $board; display = $display; disks = $disks; gpus = @($gpuOthers); audio = $audio; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+    $data = @{ os = $osName; cpu = $cpu; ramGB = $ramGB; gpu = $gpu; directx = $dx; board = $board; display = $display; disks = $disks; gpus = @($gpuOthers); mem = $mem; audio = $audio; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
     $json = $data | ConvertTo-Json -Compress -Depth 5
     # escape non-ASCII so the file encoding never matters
     $sb = New-Object System.Text.StringBuilder

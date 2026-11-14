@@ -30,6 +30,10 @@ Rendered by the plugin itself on a test page (the numbers are illustrative) / С
 |---|---|
 | ![full](docs/block-full-en.png) | ![ru](docs/block-ru.png) |
 
+2.3: memory hint, PCGamingWiki line, 📷 button / память, строка PCGamingWiki, кнопка 📷:
+
+![2.3](docs/block-2.3.png)
+
 | Compact / Компактный | Weak PC / Слабый ПК | Settings / Настройки |
 |---|---|---|
 | ![compact](docs/block-compact.png) | ![weak](docs/block-weak-pc.png) | ![settings](docs/block-settings.png) |
@@ -56,6 +60,17 @@ Rendered by the plugin itself on a test page (the numbers are illustrative) / С
 * **Compact view** (▴ button): one line with the verdict and the FPS at your resolution.
 * **DLC pages** without their own requirements use the base game's (fetched from the store).
 * **English / Russian**, auto-detected from the Steam page language (override in the settings).
+* **Memory (2.3).** RAM row shows type and real speed (`DDR4-3200`); a hint appears if the memory runs below its rated speed
+  (XMP/EXPO probably off), if only one module is installed, or if a Ryzen runs slow memory.
+* **PCGamingWiki (2.3).** One line under the FPS table with the game's features from PCGamingWiki
+  (ultrawide, 4K, 120+ FPS, HDR, ray tracing…) and a link to the page with known issues and fixes. Hidden if the wiki has no data.
+  It shows structured feature flags, not crash reports — for those use the link.
+* **Badges ✓ / ≈ / ✗ in store lists (2.3).** Search results, capsules, tabs and wishlist get a small badge by the price.
+  Requirements are loaded lazily for the visible cards (one request per ~0.7 s, cached 14 days, stops for 90 s on rate limit).
+  On the wishlist (hashed React class names) the badge is added to any game link with a picture, so its position may differ.
+* **Profiles (2.3).** Neon / Minimal / Verdict only — in the settings or with **Alt+Shift+P**.
+* **Hotkeys (2.3).** Alt+Shift+C — collapse/expand the block, Alt+Shift+S (or the 📷 button) — copy the block as a PNG to the clipboard
+  (falls back to downloading `pc-info.png`). Ignored while typing in a field.
 * Gear → every feature can be switched off; "Refresh FPS" clears the cache.
 * Debug: `document.documentElement.dataset.pcinfoFps` in the store page console lists what each site answered.
 
@@ -82,6 +97,8 @@ Requires a Millennium version with Lua plugins (3.x) and Windows (hardware detec
 | `backend/pc-info.ps1` | hardware detection (PowerShell) |
 | `.millennium/Dist/webkit.js` | webkit module injected into store pages |
 | `.millennium/Dist/index.js` | empty frontend module |
+| `src/tests/` | tests: `unit/` (hardware tables, build output) and `e2e/` (Playwright: block, FPS, memory, PCGamingWiki, profiles, hotkeys, PNG, badges) |
+| `.github/workflows/test.yml` | runs the tests on every push and pull request |
 | `src/` | readable sources of `webkit.js` (`pcinfo-core.js`, `pcinfo-hw.js`) and `build.py` that produces it |
 
 ## Troubleshooting / Если блока нет
@@ -103,3 +120,15 @@ Settings stay in your browser storage.
 ## License
 
 GPL-3.0 — see [LICENSE.txt](LICENSE.txt).
+
+## Tests / Тесты
+
+```
+npm install
+npx playwright install chromium
+npm test            # unit + browser tests (npm run test:unit / test:e2e separately)
+```
+
+The browser tests use a fake store page and a fake Millennium backend, so no Steam and no network are needed.
+Тесты используют поддельную страницу магазина и поддельный бэкенд — Steam и сеть не нужны.
+Edit `src/*.js`, then `npm run build` (the unit test checks that `webkit.js` matches the sources).

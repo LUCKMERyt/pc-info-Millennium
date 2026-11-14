@@ -2,7 +2,7 @@
   "name": "pc-info",
   "common_name": "PC Info (Night Neon)",
   "description": "Shows a PC configuration block (CPU, GPU, RAM, motherboard, disks, audio) under the system requirements in the Steam store. Specs are detected automatically; checks CPU/GPU/RAM/VRAM/SSD against the requirements and shows an averaged FPS estimate (EN/RU).",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "backendType": "lua",
   "useBackend": true
 }

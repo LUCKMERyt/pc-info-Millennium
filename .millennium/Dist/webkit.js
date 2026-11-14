@@ -11,7 +11,9 @@
   // ---- if the module is already running (loaded twice), just hand over the data ----
   if (window.__pcInfo) { if (DETECTED) window.__pcInfo.setData(DETECTED); return; }
   try { document.documentElement.setAttribute("data-pcinfo", "injected"); } catch (e) {}
-  if (!/steampowered\.com\/app\//.test(location.href)) return;
+  var IS_APP = /steampowered\.com\/app\//.test(location.href);
+  var IS_STORE = /^https?:\/\/store\.steampowered\.com\//.test(location.href);
+  if (!IS_APP && !IS_STORE) return;
 
   // ---- built-in specs, used until the backend delivers the real ones ----
   var DEFAULT_DATA = {
@@ -20,6 +22,7 @@
     ramGB: 32,
     gpu: "NVIDIA GeForce RTX 5060 8 GB",
     gpus: [],
+    mem: null,
     directx: "12",
     board: "MSI MPG B550 GAMING PLUS",
     display: "AQ27H3 27\" 2560x1440 180 Hz HDR",
@@ -328,7 +331,17 @@ var HW = (function () {
       p_score_cpu: "\u0411\u0430\u043b\u043b\u044b \u043f\u0440\u043e\u0446\u0435\u0441\u0441\u043e\u0440\u0430", p_score_gpu: "\u0411\u0430\u043b\u043b\u044b \u0432\u0438\u0434\u0435\u043e\u043a\u0430\u0440\u0442\u044b",
       p_score_hint: "\u0428\u043a\u0430\u043b\u0430 \u0443\u0441\u043b\u043e\u0432\u043d\u0430\u044f (\u043a\u0430\u043a PassMark): RTX 3060 \u2248 17000, RTX 4070 \u2248 27000, Ryzen 5 5600X \u2248 21800, Core i5-12400 \u2248 19000. \u0420\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u043d\u043e: \u043f\u0440\u043e\u0446\u0435\u0441\u0441\u043e\u0440 {0}, \u0432\u0438\u0434\u0435\u043e\u043a\u0430\u0440\u0442\u0430 {1}.",
       p_rows: "\u0421\u0442\u0440\u043e\u043a\u0438: \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c / \u0441\u0432\u043e\u0451 \u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435 (\u043f\u0443\u0441\u0442\u043e = \u0430\u0432\u0442\u043e)", p_extra: "\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435 \u0441\u0442\u0440\u043e\u043a\u0438", p_ph_name: "\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435", p_ph_value: "\u0417\u043d\u0430\u0447\u0435\u043d\u0438\u0435",
-      p_refresh: "\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c FPS", p_reset: "\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c"
+      p_refresh: "\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c FPS", p_reset: "\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c",
+      mem_xmp: "\u041f\u0430\u043c\u044f\u0442\u044c \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u043d\u0430 {0} \u041c\u0413\u0446 \u043f\u0440\u0438 \u0437\u0430\u044f\u0432\u043b\u0435\u043d\u043d\u044b\u0445 {1} \u2014 \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e, \u043d\u0435 \u0432\u043a\u043b\u044e\u0447\u0451\u043d XMP/EXPO (\u0432 BIOS).",
+      mem_single: "\u0423\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u043e\u0434\u0438\u043d \u043c\u043e\u0434\u0443\u043b\u044c \u043f\u0430\u043c\u044f\u0442\u0438 \u2014 \u043e\u0434\u043d\u043e\u043a\u0430\u043d\u0430\u043b\u044c\u043d\u044b\u0439 \u0440\u0435\u0436\u0438\u043c \u0441\u043d\u0438\u0436\u0430\u0435\u0442 FPS.",
+      mem_ryzen: "\u0423 Ryzen \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c \u043f\u0430\u043c\u044f\u0442\u0438 \u0437\u0430\u043c\u0435\u0442\u043d\u043e \u0432\u043b\u0438\u044f\u0435\u0442 \u043d\u0430 FPS (\u043e\u0440\u0438\u0435\u043d\u0442\u0438\u0440: DDR4-3600, DDR5-6000).",
+      pcgw: "PCGamingWiki", pcgw_link: "\u043f\u0440\u043e\u0431\u043b\u0435\u043c\u044b \u0438 \u0444\u0438\u043a\u0441\u044b \u2197", pcgw_mod: "\u0447\u0435\u0440\u0435\u0437 \u043c\u043e\u0434",
+      pg_uw: "\u0443\u043b\u044c\u0442\u0440\u0430\u0448\u0438\u0440\u043e\u043a\u0438\u0439 \u044d\u043a\u0440\u0430\u043d", pg_4k: "4K", pg_120: "120+ FPS", pg_hdr: "HDR", pg_rt: "\u0442\u0440\u0430\u0441\u0441\u0438\u0440\u043e\u0432\u043a\u0430 \u043b\u0443\u0447\u0435\u0439", pg_up: "\u0430\u043f\u0441\u043a\u0435\u0439\u043b", pg_bl: "\u043e\u043a\u043d\u043e \u0431\u0435\u0437 \u0440\u0430\u043c\u043a\u0438",
+      shot: "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u0438\u043d\u043a\u0443", toast_copied: "\u041a\u0430\u0440\u0442\u0438\u043d\u043a\u0430 \u0441\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u0430 \u0432 \u0431\u0443\u0444\u0435\u0440 \u043e\u0431\u043c\u0435\u043d\u0430", toast_saved: "\u041a\u0430\u0440\u0442\u0438\u043d\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430 \u0444\u0430\u0439\u043b\u043e\u043c pc-info.png", toast_fail: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u0434\u0435\u043b\u0430\u0442\u044c \u043a\u0430\u0440\u0442\u0438\u043d\u043a\u0443",
+      p_profiles: "\u041f\u0440\u043e\u0444\u0438\u043b\u0438", prof_neon: "\u041d\u0435\u043e\u043d", prof_minimal: "\u041c\u0438\u043d\u0438\u043c\u0430\u043b\u0438\u0437\u043c", prof_verdict: "\u0422\u043e\u043b\u044c\u043a\u043e \u0432\u0435\u0440\u0434\u0438\u043a\u0442",
+      p_badges: "\u0417\u043d\u0430\u0447\u043a\u0438 \u2713/\u2248/\u2717 \u0432 \u0441\u043f\u0438\u0441\u043a\u0430\u0445 \u043c\u0430\u0433\u0430\u0437\u0438\u043d\u0430", p_pcgw: "\u041e\u0441\u043e\u0431\u0435\u043d\u043d\u043e\u0441\u0442\u0438 \u0438\u0433\u0440\u044b \u0441 PCGamingWiki",
+      p_keys: "\u0413\u043e\u0440\u044f\u0447\u0438\u0435 \u043a\u043b\u0430\u0432\u0438\u0448\u0438: Alt+Shift+C \u2014 \u0441\u0432\u0435\u0440\u043d\u0443\u0442\u044c/\u0440\u0430\u0437\u0432\u0435\u0440\u043d\u0443\u0442\u044c, Alt+Shift+P \u2014 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c, Alt+Shift+S \u2014 \u043a\u0430\u0440\u0442\u0438\u043d\u043a\u0430.",
+      badge_tip: "\u0412\u0430\u0448 \u041f\u041a: {0}"
     },
     en: {
       title: "\ud83d\udda5\ufe0f PC configuration",
@@ -374,7 +387,17 @@ var HW = (function () {
       p_score_cpu: "CPU score", p_score_gpu: "GPU score",
       p_score_hint: "Rough PassMark-like scale: RTX 3060 \u2248 17000, RTX 4070 \u2248 27000, Ryzen 5 5600X \u2248 21800, Core i5-12400 \u2248 19000. Recognised: CPU {0}, GPU {1}.",
       p_rows: "Rows: show / own value (empty = auto)", p_extra: "Extra rows", p_ph_name: "Name", p_ph_value: "Value",
-      p_refresh: "Refresh FPS", p_reset: "Reset"
+      p_refresh: "Refresh FPS", p_reset: "Reset",
+      mem_xmp: "Memory runs at {0} MHz while rated for {1} \u2014 XMP/EXPO may be off (enable it in the BIOS).",
+      mem_single: "Only one memory module is installed \u2014 single-channel mode lowers FPS.",
+      mem_ryzen: "Memory speed noticeably affects FPS on Ryzen (target: DDR4-3600, DDR5-6000).",
+      pcgw: "PCGamingWiki", pcgw_link: "issues & fixes \u2197", pcgw_mod: "via mod",
+      pg_uw: "ultrawide", pg_4k: "4K", pg_120: "120+ FPS", pg_hdr: "HDR", pg_rt: "ray tracing", pg_up: "upscaling", pg_bl: "borderless window",
+      shot: "Save as picture", toast_copied: "Picture copied to the clipboard", toast_saved: "Picture saved as pc-info.png", toast_fail: "Could not make the picture",
+      p_profiles: "Profiles", prof_neon: "Neon", prof_minimal: "Minimal", prof_verdict: "Verdict only",
+      p_badges: "\u2713/\u2248/\u2717 badges in store lists", p_pcgw: "Game features from PCGamingWiki",
+      p_keys: "Hotkeys: Alt+Shift+C \u2014 collapse/expand, Alt+Shift+P \u2014 next profile, Alt+Shift+S \u2014 picture.",
+      badge_tip: "Your PC: {0}"
     }
   };
   var LANG = "en";
@@ -403,7 +426,7 @@ var HW = (function () {
     accent: "#22d3ee", border: "#8b5cf6", bg: "#06080e", bgAlpha: 88, text: "#c9d1e0", label: "#8b95aa",
     fontSize: 12, width: 100, radius: 12, labelWidth: 170,
     compare: true, fps: true, online: true, upscale: true, collapsed: false,
-    playRes: "auto", targetHz: 0, scoreCpu: 0, scoreGpu: 0,
+    playRes: "auto", targetHz: 0, scoreCpu: 0, scoreGpu: 0, pcgw: true, badges: true, profile: "neon",
     sources: { fpsbench: true, chipversus: true, checkfps: true },
     hidden: {}, custom: {}, extra: []
   };
@@ -916,6 +939,322 @@ var HW = (function () {
     return h + '<div class="nn-src">' + tail + "</div></div>";
   }
 
+
+  // ================================================================ memory: type, speed, XMP/EXPO
+  function memSpeed(m) { return m ? (+m.conf || +m.rated || 0) : 0; }
+  function memLabel(m) {
+    if (!m || !memSpeed(m)) return m && m.type ? " " + m.type : "";
+    return " " + (m.type ? m.type + "-" : "") + memSpeed(m);
+  }
+  // returns a list of HTML notes (max 2)
+  function memNotes(m, cpuStr) {
+    var out = [];
+    if (!m) return out;
+    var conf = +m.conf || 0, rated = +m.rated || 0, type = String(m.type || "");
+    if (conf && rated && conf < rated * 0.9) out.push(t("mem_xmp", conf, rated));
+    if ((+m.count || 0) === 1) out.push(t("mem_single"));
+    var sp = conf || rated, ddr5 = /DDR5/i.test(type);
+    if (/ryzen/i.test(cpuStr || "") && sp && sp < (ddr5 ? 5200 : 3200) && !out.length) out.push(t("mem_ryzen"));
+    return out.slice(0, 2);
+  }
+
+  // ================================================================ PCGamingWiki: game features in one line
+  var PCGW_KEY = "nnPcInfoPcgw1";
+  var PCGW_FIELDS_FULL = ["Ultrawidescreen", "4K_Ultra_HD", "120_FPS", "HDR", "Ray_tracing", "Upscaling", "Borderless_fullscreen_windowed"];
+  var PCGW_FIELDS_SAFE = ["Ultrawidescreen", "4K_Ultra_HD", "HDR"];
+  var PCGW_SHOW = [["ultrawidescreen", "pg_uw"], ["4kultrahd", "pg_4k"], ["120fps", "pg_120"], ["hdr", "pg_hdr"], ["raytracing", "pg_rt"], ["upscaling", "pg_up"], ["borderlessfullscreenwindowed", "pg_bl"]];
+  var pcgw = { id: "", status: "idle", data: null };
+  function pcgwUrl(id, fields) {
+    var f = ["Infobox_game._pageName%3DPage"].concat(fields.map(function (x) { return "Video." + x; })).join(",");
+    return "https://www.pcgamingwiki.com/w/api.php?action=cargoquery&format=json&limit=1&tables=Infobox_game,Video&join_on=Infobox_game._pageID%3DVideo._pageID&fields=" + f +
+      "&where=" + encodeURIComponent('Infobox_game.Steam_AppID HOLDS "' + id + '"');
+  }
+  // text of the API answer -> { page, flags: { ultrawidescreen: "true"|"false"|"hackable" ... } } or null
+  function parsePcgw(text) {
+    var j;
+    try { j = JSON.parse(String(text)); } catch (e) { return null; }
+    var rows = j && j.cargoquery;
+    if (!rows || !rows.length) return null;
+    var row = rows[0].title || rows[0], flags = {}, page = "";
+    Object.keys(row).forEach(function (k) {
+      var nk = k.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (nk === "page") { page = String(row[k]); return; }
+      var v = String(row[k] == null ? "" : row[k]).toLowerCase().trim();
+      if (v === "true" || v === "false" || v === "hackable" || v === "limited") flags[nk] = v;
+    });
+    return { page: page, flags: flags };
+  }
+  function pcgwCacheGet(id) {
+    try { var c = JSON.parse(localStorage.getItem(PCGW_KEY) || "{}")[id]; if (c && Date.now() - c.t < (c.d ? 14 : 1) * 86400000) return c; } catch (e) {}
+    return null;
+  }
+  function pcgwCacheSet(id, d) {
+    try {
+      var all = JSON.parse(localStorage.getItem(PCGW_KEY) || "{}"), ks;
+      all[id] = { t: Date.now(), d: d }; ks = Object.keys(all);
+      if (ks.length > 150) ks.sort(function (a, b) { return all[a].t - all[b].t; }).slice(0, ks.length - 150).forEach(function (k) { delete all[k]; });
+      localStorage.setItem(PCGW_KEY, JSON.stringify(all));
+    } catch (e) {}
+  }
+  function pcgwFetch(id, fields) {
+    return rpc("FetchPage", { url: pcgwUrl(id, fields) }).then(function (txt) {
+      if (typeof txt !== "string" || /^ERR/.test(txt)) return { err: true };
+      if (/"error"/.test(txt) && !/"cargoquery"/.test(txt)) return { err: true, bad: true };
+      return { d: parsePcgw(txt) };
+    });
+  }
+  function ensurePcgw(s) {
+    var id = curApp().id;
+    if (!s.pcgw || !s.online || !id) return;
+    if (pcgw.id === id) return;
+    pcgw = { id: id, status: "loading", data: null };
+    var c = pcgwCacheGet(id);
+    if (c) { pcgw.data = c.d; pcgw.status = c.d ? "done" : "none"; return; }
+    pcgwFetch(id, PCGW_FIELDS_FULL).then(function (r) {
+      if (r.bad) return pcgwFetch(id, PCGW_FIELDS_SAFE);   // an unknown field name fails the whole query
+      return r;
+    }).then(function (r) {
+      if (pcgw.id !== id) return;
+      if (r.err) { pcgw.status = "none"; return; }
+      pcgw.data = r.d; pcgw.status = r.d ? "done" : "none";
+      pcgwCacheSet(id, r.d);
+      render();
+    });
+  }
+  function pcgwHtml(d, id) {
+    if (!d || !d.flags) return "";
+    var items = [];
+    PCGW_SHOW.forEach(function (x) {
+      var v = d.flags[x[0]];
+      if (v === "true") items.push('<span class="nn-ok">\u2713</span> ' + esc(t(x[1])));
+      else if (v === "false") items.push('<span class="nn-bad">\u2717</span> ' + esc(t(x[1])));
+      else if (v === "hackable") items.push('<span class="nn-mid">\u2248</span> ' + esc(t(x[1])) + " (" + esc(t("pcgw_mod")) + ")");
+    });
+    if (!items.length) return "";
+    return '<div class="nn-pcgw">' + esc(t("pcgw")) + ": " + items.join(" \u00b7 ") + ' \u00b7 <a href="https://www.pcgamingwiki.com/api/appid.php?appid=' + esc(id) + '" target="_blank" rel="noopener">' + esc(t("pcgw_link")) + "</a></div>";
+  }
+
+  // ================================================================ profiles
+  var PROFILE_IDS = ["neon", "minimal", "verdict"];
+  var PROFILES = {
+    neon: { accent: "#22d3ee", border: "#8b5cf6", bg: "#06080e", bgAlpha: 88, text: "#c9d1e0", label: "#8b95aa", radius: 12, compare: true, fps: true, online: true, upscale: true, pcgw: true, collapsed: false, hidden: {} },
+    minimal: { accent: "#aab4c8", border: "#3a4256", bg: "#10141c", bgAlpha: 70, text: "#c9d1e0", label: "#7d8799", radius: 6, compare: true, fps: false, online: false, upscale: false, pcgw: false, collapsed: false, hidden: { board: true, os: true, directx: true, audio: true, display: true } },
+    verdict: { compare: true, fps: false, online: false, upscale: false, pcgw: false, collapsed: true }
+  };
+  function applyProfile(id) {
+    if (!PROFILES[id]) return false;
+    var s = load(), p = PROFILES[id], k;
+    for (k in p) s[k] = (p[k] && typeof p[k] === "object") ? JSON.parse(JSON.stringify(p[k])) : p[k];
+    s.profile = id; save(s); render();
+    return true;
+  }
+  function nextProfile() {
+    var cur = PROFILE_IDS.indexOf(load().profile);
+    return applyProfile(PROFILE_IDS[(cur + 1) % PROFILE_IDS.length]);
+  }
+
+  // ================================================================ PNG export of the block
+  function toast(msg) {
+    if (!box) return;
+    var el = box.div.querySelector(".nn-toast");
+    if (!el) { el = document.createElement("div"); el.className = "nn-toast"; box.div.appendChild(el); }
+    el.textContent = msg;
+    clearTimeout(toast.t); toast.t = setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 3500);
+  }
+  function exportPng() {
+    return new Promise(function (resolve) {
+      try {
+        if (!box) return resolve(null);
+        var s = load(), div = box.div, w = Math.ceil(div.offsetWidth), h = Math.ceil(div.offsetHeight);
+        if (!w || !h) return resolve(null);
+        var clone = div.cloneNode(true);
+        [].forEach.call(clone.querySelectorAll(".nn-btn,.nn-set,.nn-toast"), function (n) { n.parentNode.removeChild(n); });
+        clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+        clone.style.margin = "0"; clone.style.width = w + "px";
+        var xml = new XMLSerializer().serializeToString(clone);
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (w + 24) + '" height="' + (h + 24) + '"><foreignObject x="12" y="12" width="' + w + '" height="' + h + '"><style xmlns="http://www.w3.org/1999/xhtml">' +
+          css(s).replace(/</g, "&lt;") + "</style>" + xml + "</foreignObject></svg>";
+        var img = new Image();
+        img.onload = function () {
+          try {
+            var c = document.createElement("canvas"), k = 2;
+            c.width = (w + 24) * k; c.height = (h + 24) * k;
+            var cx = c.getContext("2d");
+            cx.fillStyle = "#0b0e14"; cx.fillRect(0, 0, c.width, c.height);
+            cx.scale(k, k); cx.drawImage(img, 0, 0);
+            c.toBlob(function (b) { resolve(b || null); }, "image/png");
+          } catch (e) { resolve(null); }
+        };
+        img.onerror = function () { resolve(null); };
+        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+      } catch (e) { resolve(null); }
+    });
+  }
+  function shareImage() {
+    return exportPng().then(function (b) {
+      if (!b) { toast(t("toast_fail")); return false; }
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          return navigator.clipboard.write([new ClipboardItem({ "image/png": b })]).then(function () { toast(t("toast_copied")); return true; }, function () { return download(b); });
+        }
+      } catch (e) {}
+      return download(b);
+    });
+  }
+  function download(b) {
+    try {
+      var a = document.createElement("a"), u = URL.createObjectURL(b);
+      a.href = u; a.download = "pc-info.png";
+      (document.body || document.documentElement).appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(u); if (a.parentNode) a.parentNode.removeChild(a); }, 1000);
+      toast(t("toast_saved")); return true;
+    } catch (e) { toast(t("toast_fail")); return false; }
+  }
+  function toggleFold() { var x = load(); x.collapsed = !x.collapsed; save(x); render(); }
+  function onKey(e) {
+    if (!e.altKey || !e.shiftKey || e.ctrlKey || e.metaKey) return;
+    var tg = e.target, tag = tg && tg.tagName ? tg.tagName.toLowerCase() : "";
+    if (tag === "input" || tag === "textarea" || tag === "select" || (tg && tg.isContentEditable)) return;
+    var c = e.code;
+    if (c === "KeyC") { if (box) { e.preventDefault(); toggleFold(); } }
+    else if (c === "KeyP") { if (box) { e.preventDefault(); nextProfile(); } }
+    else if (c === "KeyS") { if (box) { e.preventDefault(); shareImage(); } }
+  }
+
+  // ================================================================ badges in store lists (search, tabs, capsules, wishlist)
+  var BADGE_KEY = "nnPcInfoBadges1";
+  var badgeMem = null, badgeQueue = [], badgeBusy = false, badgePause = 0, badgeIO = null, badgeMO = null, badgeTimer = 0;
+  function badgeStore() {
+    if (badgeMem) return badgeMem;
+    try { badgeMem = JSON.parse(localStorage.getItem(BADGE_KEY) || "{}") || {}; } catch (e) { badgeMem = {}; }
+    return badgeMem;
+  }
+  function badgeSave() {
+    try {
+      var all = badgeStore(), ks = Object.keys(all);
+      if (ks.length > 400) ks.sort(function (a, b) { return all[a].t - all[b].t; }).slice(0, ks.length - 400).forEach(function (k) { delete all[k]; });
+      localStorage.setItem(BADGE_KEY, JSON.stringify(all));
+    } catch (e) {}
+  }
+  function reqsFromDetails(det) {
+    var pr = det && det.pc_requirements;
+    if (!pr || Array.isArray(pr)) return null;
+    function col(html) {
+      if (!html) return null;
+      var d = document.createElement("div");
+      d.innerHTML = String(html);      // inert: not attached to the page
+      return d;
+    }
+    var mn = col(pr.minimum), rc = col(pr.recommended);
+    var r = { min: colReqs(mn), rec: colReqs(rc) };
+    return r;
+  }
+  function badgeVerdict(reqs) {
+    var s = load(), my = myParts(s), sc = myScores(s, my);
+    return verdict(checkHw(reqs, s, my, sc));
+  }
+  function badgeFor(id) {
+    var e = badgeStore()[id];
+    if (!e || !e.r) return null;
+    if (Date.now() - e.t > 14 * 86400000) return null;
+    return badgeVerdict(e.r);
+  }
+  function cardAppId(a) {
+    var id = a.getAttribute("data-ds-appid");
+    if (id) return String(id).split(",")[0];
+    var m = /\/app\/(\d+)/.exec(a.getAttribute("href") || "");
+    return m ? m[1] : "";
+  }
+  function badgeEl(a) {
+    var b = a.querySelector(":scope > .nn-badge, .nn-badge");
+    return b;
+  }
+  function putBadge(a, v) {
+    var b = badgeEl(a);
+    if (!v) { if (b && b.parentNode) b.parentNode.removeChild(b); return; }
+    if (!b) {
+      b = document.createElement("span"); b.className = "nn-badge";
+      var price = a.querySelector(".discount_final_price,.search_price,.game_purchase_price,.tab_item_discount,.price");
+      if (price && price.parentNode) price.parentNode.insertBefore(b, price);
+      else { b.className += " nn-badge-abs"; if (getComputedStyle(a).position === "static") a.style.position = "relative"; a.appendChild(b); }
+    }
+    b.className = b.className.replace(/\bnn-b-\w+/g, "").trim() + " nn-b-" + v[0];
+    b.textContent = v[0] === "ok" ? "\u2713" : (v[0] === "mid" ? "\u2248" : "\u2717");
+    b.title = t("badge_tip", v[1]);
+  }
+  function badgeStyle() {
+    if (document.getElementById("nn-badge-css")) return;
+    var st = document.createElement("style"); st.id = "nn-badge-css";
+    st.textContent = ".nn-badge{display:inline-block;min-width:18px;padding:0 5px;margin-right:6px;border-radius:9px;font:700 12px/18px Arial,sans-serif;text-align:center;vertical-align:middle;border:1px solid currentColor;background:rgba(0,0,0,.55)}" +
+      ".nn-badge-abs{position:absolute;right:6px;bottom:6px;margin:0;z-index:5}.nn-b-ok{color:#4ade80}.nn-b-mid{color:#fbbf24}.nn-b-bad{color:#f87171}";
+    (document.head || document.documentElement).appendChild(st);
+  }
+  function badgeNext() {
+    if (badgeBusy || !badgeQueue.length || state.source !== "auto") return;
+    if (Date.now() < badgePause) { setTimeout(badgeNext, badgePause - Date.now() + 50); return; }
+    var a = badgeQueue.shift(), id = cardAppId(a);
+    if (!id || badgeFor(id)) { if (id) putBadge(a, badgeFor(id)); return badgeNext(); }
+    badgeBusy = true;
+    var done = function () { badgeBusy = false; setTimeout(badgeNext, 700); };
+    try {
+      fetch("/api/appdetails?appids=" + id + "&filters=pc_requirements&l=english").then(function (r) {
+        if (r.status === 429 || r.status === 403) { badgePause = Date.now() + 90000; badgeQueue.unshift(a); throw new Error("rate"); }
+        return r.json();
+      }).then(function (j) {
+        var e = j && j[id], reqs = e && e.success ? reqsFromDetails(e.data) : null;
+        var ok = reqs && (reqs.min.cpu.length || reqs.min.gpu.length || reqs.min.ram || reqs.rec.cpu.length || reqs.rec.gpu.length || reqs.rec.ram);
+        badgeStore()[id] = { t: Date.now(), r: ok ? reqs : null };
+        badgeSave();
+        document.querySelectorAll('a[data-nn-b="' + id + '"]').forEach(function (n) { putBadge(n, ok ? badgeFor(id) : null); });
+        done();
+      })["catch"](function () { done(); });
+    } catch (e) { done(); }
+  }
+  function badgeSeen(a) {
+    var id = a.getAttribute("data-nn-b");
+    var c = badgeStore()[id];
+    if (c && Date.now() - c.t < 14 * 86400000) { putBadge(a, c.r ? badgeFor(id) : null); return; }
+    if (badgeQueue.indexOf(a) < 0) badgeQueue.push(a);
+    badgeNext();
+  }
+  function badgeScan() {
+    var s = load();
+    if (!s.badges) {
+      [].forEach.call(document.querySelectorAll(".nn-badge"), function (b) { if (b.parentNode) b.parentNode.removeChild(b); });
+      return;
+    }
+    if (state.source !== "auto") return;
+    badgeStyle();
+    var own = pageAppId();
+    [].forEach.call(document.querySelectorAll('a[href*="/app/"],a[data-ds-appid]'), function (a) {
+      if (a.hasAttribute("data-nn-b")) return;
+      var id = cardAppId(a);
+      if (!id || id === own) return;
+      if (!(a.hasAttribute("data-ds-appid") || a.querySelector("img") || a.classList.contains("search_result_row"))) return;
+      a.setAttribute("data-nn-b", id);
+      if (window.IntersectionObserver) {
+        if (!badgeIO) badgeIO = new IntersectionObserver(function (es) {
+          es.forEach(function (en) { if (en.isIntersecting) { badgeIO.unobserve(en.target); badgeSeen(en.target); } });
+        }, { rootMargin: "200px" });
+        badgeIO.observe(a);
+      } else badgeSeen(a);
+    });
+  }
+  function badgesRefresh() {
+    // hardware or settings changed: redraw every badge from the cache
+    [].forEach.call(document.querySelectorAll("a[data-nn-b]"), function (a) {
+      var id = a.getAttribute("data-nn-b"), c = badgeStore()[id];
+      if (c && c.r) putBadge(a, badgeFor(id));
+    });
+    badgeScan();
+  }
+  function startBadges() {
+    if (badgeMO || !window.MutationObserver) return;
+    badgeMO = new MutationObserver(function () { clearTimeout(badgeTimer); badgeTimer = setTimeout(badgeScan, 600); });
+    badgeMO.observe(document.documentElement, { childList: true, subtree: true });
+    badgeScan();
+  }
+
   // ================================================================ rendering
   function values() {
     var d = state.data;
@@ -927,7 +1266,7 @@ var HW = (function () {
     }).join("<br>");
     var extra = (d.gpus && d.gpus.length) ? ' <span class="nn-sub">(+ ' + esc(d.gpus.join(", ")) + ")</span>" : "";
     return {
-      os: esc(d.os), cpu: esc(d.cpu), ram: d.ramGB ? d.ramGB + " " + t("gb") : "", gpu: esc(d.gpu) + extra,
+      os: esc(d.os), cpu: esc(d.cpu), ram: d.ramGB ? d.ramGB + " " + t("gb") + esc(memLabel(d.mem)) : "", gpu: esc(d.gpu) + extra,
       directx: esc(d.directx), board: esc(d.board), disks: disks, audio: esc(d.audio), display: esc(d.display)
     };
   }
@@ -957,6 +1296,8 @@ var HW = (function () {
       ".nn-btn{position:absolute;top:8px;cursor:pointer;opacity:.6;font-size:15px;background:none;border:0;color:" + s.accent + "}.nn-btn:hover{opacity:1}.nn-gear{right:10px}.nn-fold{right:36px}" +
       ".nn-compact{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;cursor:pointer;padding-right:60px}.nn-compact b{color:" + s.accent + ";letter-spacing:.04em}" +
       ".nn-chip{padding:1px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.12);font-weight:600}" +
+      ".nn-pcgw{margin-top:6px;font-size:" + Math.max(10, (+s.fontSize) - 1) + "px}.nn-pcgw a{color:" + s.accent + "}" +
+      ".nn-shot{right:62px}.nn-toast{position:absolute;left:16px;bottom:8px;padding:3px 10px;border-radius:8px;background:rgba(0,0,0,.8);border:1px solid " + rgba(s.accent, .6) + ";color:" + s.text + "}" +
       ".nn-set{margin-top:10px;padding:10px;border-top:1px dashed " + rgba(s.border, .5) + "}" +
       ".nn-set label{display:flex;align-items:center;gap:8px;margin:4px 0}.nn-set label span{min-width:190px;color:" + s.label + "}" +
       ".nn-set input[type=text],.nn-set input[type=number],.nn-set select{background:rgba(0,0,0,.4);border:1px solid " + rgba(s.border, .5) + ";color:" + s.text + ";padding:2px 6px;border-radius:6px;font-size:inherit}" +
@@ -993,7 +1334,7 @@ var HW = (function () {
       var src = state.source === "auto"
         ? t("src_auto") + (state.updated ? " (" + esc(state.updated) + ")" : "")
         : t("src_wait");
-      html = head + '<button class="nn-btn nn-fold" title="' + esc(t("fold")) + '" data-act="fold">\u25b4</button><h3>' + esc(s.title || t("title")) + '</h3><div class="nn-src">' + src + "</div><ul>";
+      html = head + '<button class="nn-btn nn-fold" title="' + esc(t("fold")) + '" data-act="fold">\u25b4</button><button class="nn-btn nn-shot" title="' + esc(t("shot")) + '" data-act="shot">\ud83d\udcf7</button><h3>' + esc(s.title || t("title")) + '</h3><div class="nn-src">' + src + "</div><ul>";
       ROWS.forEach(function (k) {
         if (s.hidden[k]) return;
         var val = s.custom[k] ? esc(s.custom[k]) : vals[k];
@@ -1014,10 +1355,12 @@ var HW = (function () {
       html += "</ul>";
       if (s.compare) {
         if (v) html += '<div class="nn-verdict nn-v-' + v[0] + '">' + (v[0] === "ok" ? "\u2713 " : (v[0] === "mid" ? "\u2248 " : "\u2717 ")) + v[1] + "</div>";
-        var notes = [bottleneck(hw), ssdAdvice(reqs), box.base ? t("dlc_note", esc(box.base.name)) : ""].filter(Boolean);
+        var notes = [bottleneck(hw), ssdAdvice(reqs), box.base ? t("dlc_note", esc(box.base.name)) : ""].concat(memNotes(state.data.mem, my.cpu)).filter(Boolean);
         notes.forEach(function (n) { html += '<div class="nn-note">' + n + "</div>"; });
       }
       html += fpsBlock(s, local, my);
+      ensurePcgw(s);
+      if (s.pcgw && pcgw.id === curApp().id && pcgw.data) html += pcgwHtml(pcgw.data, pcgw.id);
     }
     if (open) html += panel(s, sc);
     box.div.innerHTML = html;
@@ -1033,6 +1376,7 @@ var HW = (function () {
     [].forEach.call(box.div.querySelectorAll("[data-act]"), function (el) {
       var a = el.getAttribute("data-act");
       if (a === "fold" || a === "unfold") el.onclick = function () { var x = load(); x.collapsed = (a === "fold"); save(x); render(); };
+      if (a === "shot") el.onclick = function () { shareImage(); };
       if (a === "score") el.onclick = function () { open = true; focusScore = true; render(); };
     });
   }
@@ -1046,7 +1390,9 @@ var HW = (function () {
       return '<label><span>' + label + '</span><select data-k="' + id + '">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === v ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select></label>";
     }
     var auto = values();
-    var h = '<div class="nn-set"><h4>' + t("p_view") + "</h4>" +
+    var h = '<div class="nn-set"><h4>' + t("p_profiles") + "</h4>" +
+      PROFILE_IDS.map(function (id) { return '<button data-prof="' + id + '"' + (s.profile === id ? ' style="outline:1px solid ' + s.accent + '"' : "") + ">" + esc(t("prof_" + id)) + "</button>"; }).join("") +
+      '<div class="nn-hint">' + esc(t("p_keys")) + "</div><h4>" + t("p_view") + "</h4>" +
       '<label><span>' + t("p_title") + '</span><input type="text" data-k="title" value="' + esc(s.title) + '" placeholder="' + esc(t("title")) + '"></label>' +
       sel("lang", t("p_lang"), s.lang, [["auto", t("p_lang_auto")], ["ru", "\u0420\u0443\u0441\u0441\u043a\u0438\u0439"], ["en", "English"]]) +
       col("accent", t("p_accent"), s.accent) + col("border", t("p_border"), s.border) + col("bg", t("p_bg"), s.bg) +
@@ -1054,7 +1400,7 @@ var HW = (function () {
       num("bgAlpha", t("p_alpha"), s.bgAlpha, 0, 100) + num("fontSize", t("p_font"), s.fontSize, 9, 24) +
       num("width", t("p_width"), s.width, 30, 100) + num("radius", t("p_radius"), s.radius, 0, 30) + num("labelWidth", t("p_lw"), s.labelWidth, 60, 300) +
       chk("compare", t("p_compare"), s.compare) + chk("fps", t("p_fps"), s.fps) + chk("online", t("p_online"), s.online) +
-      chk("upscale", t("p_upscale"), s.upscale) + chk("collapsed", t("p_collapsed"), s.collapsed) +
+      chk("upscale", t("p_upscale"), s.upscale) + chk("pcgw", t("p_pcgw"), s.pcgw) + chk("badges", t("p_badges"), s.badges) + chk("collapsed", t("p_collapsed"), s.collapsed) +
       "<h4>" + t("p_play") + "</h4>" +
       sel("playRes", t("p_playres"), s.playRes, [["auto", t("p_auto_monitor")], ["1080p", "1920\u00d71080"], ["1440p", "2560\u00d71440"], ["4k", "3840\u00d72160"]]) +
       num("targetHz", t("p_hz"), s.targetHz, 0, 540) +
@@ -1092,6 +1438,7 @@ var HW = (function () {
       return s;
     }
     [].forEach.call(root.querySelectorAll("input,select"), function (i) { i.onchange = function () { save(collect()); render(); }; });
+    [].forEach.call(root.querySelectorAll("[data-prof]"), function (b) { b.onclick = function () { applyProfile(b.getAttribute("data-prof")); }; });
     root.querySelector('[data-pact="reset"]').onclick = function () { save({}); render(); };
     root.querySelector('[data-pact="refresh"]').onclick = function () {
       try { localStorage.removeItem(FPS_KEY); } catch (e) {}
@@ -1108,6 +1455,7 @@ var HW = (function () {
     for (k in DEFAULT_DATA) m[k] = (d[k] !== undefined && d[k] !== "" && d[k] !== null) ? d[k] : DEFAULT_DATA[k];
     state = { data: m, source: "auto", updated: d.updated || "" };
     render();
+    if (IS_STORE) badgesRefresh();
   }
   function requestData() {
     // 1) Millennium RPC to the Lua backend (function GetPcInfo)
@@ -1125,7 +1473,10 @@ var HW = (function () {
     } catch (e) {}
   }
 
-  window.__pcInfo = { setData: setData };
+  window.__pcInfo = {
+    setData: setData, exportPng: exportPng, applyProfile: applyProfile, nextProfile: nextProfile, toggleFold: toggleFold,
+    version: "2.3.0", _t: { memNotes: memNotes, memLabel: memLabel, parsePcgw: parsePcgw, pcgwHtml: pcgwHtml, pcgwUrl: pcgwUrl, PROFILES: PROFILES, reqsFromDetails: reqsFromDetails, badgeVerdict: badgeVerdict }
+  };
   if (window.__pcInfoPending) setData(window.__pcInfoPending);
   if (DETECTED) setData(DETECTED);
 
@@ -1172,7 +1523,9 @@ var HW = (function () {
     styleEl = document.createElement("style");
     (document.head || document.documentElement).appendChild(styleEl);
     var tries = 0;
-    (function tick() { if (build() || ++tries > 40) return; setTimeout(tick, 500); })();
+    if (IS_APP) (function tick() { if (build() || ++tries > 40) return; setTimeout(tick, 500); })();
+    document.addEventListener("keydown", onKey, true);
+    if (IS_STORE) startBadges();
     // ask for real data now and retry while the backend is still collecting it
     requestData();
     [3000, 8000, 15000].forEach(function (ms) { setTimeout(function () { if (state.source !== "auto") requestData(); }, ms); });

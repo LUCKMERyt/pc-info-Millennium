@@ -1,7 +1,7 @@
 # Builds ../.millennium/Dist/webkit.js from pcinfo-core.js + pcinfo-hw.js
 # (ASCII only: every non-ASCII character is written as a UTF-16 \uXXXX escape).
-# Usage: python3 build.py
-import os
+# Usage: python3 build.py [output file]   (default: ../.millennium/Dist/webkit.js)
+import os, sys
 here = os.path.dirname(os.path.abspath(__file__))
 core = open(os.path.join(here, 'pcinfo-core.js'), encoding='utf8').read()
 hw = open(os.path.join(here, 'pcinfo-hw.js'), encoding='utf8').read()
@@ -23,6 +23,6 @@ def esc(t):
 
 res = esc(out)
 assert '/*__DATA__*/null' in res          # placeholder that pc-info.ps1 fills with the detected specs
-dest = os.path.join(here, '..', '.millennium', 'Dist', 'webkit.js')
+dest = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, '..', '.millennium', 'Dist', 'webkit.js')
 open(dest, 'w', encoding='ascii').write(res)
 print('written', dest, len(res))
