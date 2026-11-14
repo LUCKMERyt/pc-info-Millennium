@@ -3,7 +3,7 @@
 Adds a **«🖥️ PC configuration»** block under *System requirements* on every game page of the Steam store.
 The block shows your CPU, GPU, RAM, motherboard, OS, DirectX, disks (free / total), audio device and monitor,
 and marks RAM and free disk space with ✓ / ✗ against the game's minimum requirements.
-**v2.1:** it also compares your **CPU and GPU** with the minimum / recommended requirements of the game and shows an
+**v2.1+:** it also compares your **CPU and GPU** with the minimum / recommended requirements of the game and shows an
 **approximate FPS table** (1080p / 1440p / 4K × Low / Medium / High / Ultra).
 
 Добавляет на страницы игр в магазине Steam, под «Системными требованиями», блок **«🖥️ Конфигурация ПК»**:
@@ -22,19 +22,45 @@ and marks RAM and free disk space with ✓ / ✗ against the game's minimum requ
   your own values for any row, 4 extra rows. Saved in the browser storage of the store.
   Шестерёнка ⚙ на блоке: заголовок, цвета, прозрачность, размер, ширина, строки, свои значения, 4 дополнительные строки.
 
-## CPU/GPU check and FPS / Проверка железа и FPS
+## Screenshots / Скриншоты
 
-* The requirement lines ("Processor", "Graphics") are parsed; each CPU/GPU name is looked up in a built-in table of
-  **approximate** relative performance scores (hand-written, PassMark-like). You get `Мин ✓ ×2.3 · Рек ✓ ×1.3`:
-  ✓ = at or above the requirement, ≈ = within 15 %, ✗ = weaker. Unknown models give `?` — no guess is made.
-  If a requirement lists several alternatives ("i5-8600K or Ryzen 5 3500") the weakest one is the threshold.
-* **FPS table.** First the plugin asks the FPS-estimate sites `fpsbench.com`, `chipversus.com`, `checkfps.io`
-  (through the Lua backend, `FetchPage`, allow-list of these three hosts only). The request URL contains only the game name
-  and your CPU / GPU model. If none of them knows the game, a **local estimate** is shown, computed from the game's own
-  requirements (min ≈ 30 FPS at 1080p low, recommended ≈ 60 FPS at 1080p high), accuracy about ±30 %.
-  Site values are the sites' own estimates, not measurements of your PC. Results are cached 7 days.
-* Gear → "Показывать примерный FPS" / "Искать FPS на сайтах" switch these off; "Обновить FPS" clears the cache.
+Rendered by the plugin itself on a test page (the numbers are illustrative) / Снято самим плагином на тестовой странице (числа условные).
+
+| Full block / Полный блок | Russian UI / Русский интерфейс |
+|---|---|
+| ![full](docs/block-full-en.png) | ![ru](docs/block-ru.png) |
+
+| Compact / Компактный | Weak PC / Слабый ПК | Settings / Настройки |
+|---|---|---|
+| ![compact](docs/block-compact.png) | ![weak](docs/block-weak-pc.png) | ![settings](docs/block-settings.png) |
+
+## Checks and FPS / Проверки и FPS
+
+* **Requirements check.** The "Processor / Graphics / Memory / Storage" lines of the game are parsed and compared with your PC:
+  CPU and GPU through a built-in table of **approximate** relative scores (hand-written, PassMark-like),
+  RAM and video memory (`2GB VRAM`) by size, SSD by disk type. You get `Min ✓ ×2.3 · Rec ✓ ×1.3`:
+  ✓ at or above the requirement, ≈ within 15 %, ✗ weaker. Unknown models show `?` (and "⚠ not recognised — enter score",
+  which opens the settings where you can type your own score) — nothing is guessed.
+  Several alternatives ("i5-8600K or Ryzen 5 3500") → the weakest one is the threshold.
+* **Hints.** bottleneck (CPU vs GPU), SSD advice with the disk to install on (needs the disk type from the helper),
+  laptop CPUs/GPUs (U/H/HX, Max-Q) are scaled down, integrated + discrete GPU are both listed.
+* **FPS table (1080p / 1440p / 4K × Low … Ultra).** The plugin asks **all enabled** FPS-estimate sites
+  (`fpsbench.com`, `chipversus.com`, `checkfps.io`, through the Lua backend `FetchPage`, allow-list of these hosts only)
+  and shows the **average**; hover a cell to see each site's own number. checkfps assumes a Core i5-13400 and is rescaled
+  to your CPU when yours is slower; its "min" FPS is shown for your resolution. If no site knows the game, a **local estimate** is shown,
+  computed from the game's own requirements (min ≈ 30 FPS at 1080p low, recommended ≈ 60 FPS at 1080p high), accuracy ≈ ±30 %.
+  Site values are the sites' estimates, not measurements of your PC. Results are cached 7 days.
+* **DLSS / FSR line** — an estimate (Quality ×1.35, Performance ×1.7, frame generation ×1.7) for RTX / RX / GTX / Arc cards.
+* **Your resolution and refresh rate.** Choose the resolution you really play at and a target Hz; the row is highlighted and
+  cells that reach the target are underlined.
+* **Compact view** (▴ button): one line with the verdict and the FPS at your resolution.
+* **DLC pages** without their own requirements use the base game's (fetched from the store).
+* **English / Russian**, auto-detected from the Steam page language (override in the settings).
+* Gear → every feature can be switched off; "Refresh FPS" clears the cache.
 * Debug: `document.documentElement.dataset.pcinfoFps` in the store page console lists what each site answered.
+
+Not done / Не сделано: a pass/fail column in the Steam **Library** and Workshop pages (needs the client UI class names),
+and a settings page inside the Millennium plugin menu (needs the TypeScript frontend + pnpm build).
 
 ## Install / Установка
 

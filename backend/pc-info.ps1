@@ -65,12 +65,13 @@ public static class DefaultAudio {
     $ramGB = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
 
     # GPU: real VRAM. WMI AdapterRAM is capped at 4 GB, so use nvidia-smi (NVIDIA) or the registry (qword value)
-    $gpuName = ""; $gpuBest = [int64]-1; $gpuMem = [int64]0
+    $gpuName = ""; $gpuBest = [int64]-1; $gpuMem = [int64]0; $gpuAll = @()
     $classKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11cd-bfc1-08002be10318}"
     foreach ($k in (Get-ChildItem $classKey -ErrorAction SilentlyContinue)) {
         $p = Get-ItemProperty $k.PSPath -ErrorAction SilentlyContinue
         if (-not $p -or -not $p.DriverDesc) { continue }
         if ($p.DriverDesc -match 'Basic|Remote|Virtual|Mirror') { continue }
+        if ($gpuAll -notcontains $p.DriverDesc) { $gpuAll += $p.DriverDesc }
         $mem = [int64]0
         $q = $p.'HardwareInformation.qwMemorySize'
         if ($q -is [byte[]]) { $mem = [BitConverter]::ToInt64($q, 0) } elseif ($q) { $mem = [int64]$q }
@@ -94,6 +95,7 @@ public static class DefaultAudio {
             } catch { }
         }
     }
+    $gpuOthers = @($gpuAll | Where-Object { $_ -ne $gpuName })
     $gpu = $gpuName
     if ($gpuMem -gt 0) { $gpu = "{0} {1} GB" -f $gpuName, [math]::Round($gpuMem / 1GB) }
 
@@ -109,21 +111,33 @@ public static class DefaultAudio {
     }
 
     $phys = @{}
-    try { Get-PhysicalDisk | ForEach-Object { $phys[[string]$_.DeviceId] = $_.FriendlyName } } catch { }
+    $ptype = @{}
+    try {
+        Get-PhysicalDisk | ForEach-Object {
+            $phys[[string]$_.DeviceId] = $_.FriendlyName
+            $bus = [string]$_.BusType; $mt = [string]$_.MediaType
+            $t = ""
+            if ($bus -eq "NVMe" -or $bus -eq "17") { $t = "NVMe" }
+            elseif ($mt -eq "SSD" -or $mt -eq "4") { $t = "SSD" }
+            elseif ($mt -eq "HDD" -or $mt -eq "3") { $t = "HDD" }
+            $ptype[[string]$_.DeviceId] = $t
+        }
+    } catch { }
     $disks = @()
     foreach ($d in (Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Sort-Object DeviceID)) {
-        $model = ""
+        $model = ""; $dtype = ""
         try {
             $part = Get-Partition -DriveLetter $d.DeviceID.Substring(0, 1) -ErrorAction Stop
             $model = $phys[[string]$part.DiskNumber]
+            $dtype = $ptype[[string]$part.DiskNumber]
         } catch { }
-        $disks += @{ id = $d.DeviceID; free = [math]::Round($d.FreeSpace / 1GB); total = [math]::Round($d.Size / 1GB); model = $model }
+        $disks += @{ id = $d.DeviceID; free = [math]::Round($d.FreeSpace / 1GB); total = [math]::Round($d.Size / 1GB); model = $model; type = $dtype }
     }
 
     $audio = [DefaultAudio]::GetDefaultName()
     if (-not $audio) { $audio = "n/a" }
 
-    $data = @{ os = $osName; cpu = $cpu; ramGB = $ramGB; gpu = $gpu; directx = $dx; board = $board; display = $display; disks = $disks; audio = $audio; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+    $data = @{ os = $osName; cpu = $cpu; ramGB = $ramGB; gpu = $gpu; directx = $dx; board = $board; display = $display; disks = $disks; gpus = @($gpuOthers); audio = $audio; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
     $json = $data | ConvertTo-Json -Compress -Depth 5
     # escape non-ASCII so the file encoding never matters
     $sb = New-Object System.Text.StringBuilder

@@ -35,7 +35,7 @@ var HW = (function () {
     rx7600: 19700, rx7600xt: 20500, rx7700xt: 26000, rx7800xt: 28500, rx7900gre: 30500,
     rx7900xt: 33500, rx7900xtx: 35500, rx9060xt: 25500, rx9070: 32000, rx9070xt: 34500,
     arca380: 6000, arca580: 13500, arca750: 16500, arca770: 17500, arcb570: 19000, arcb580: 21000,
-    intelhd4000: 700, intelhd530: 1200, uhd630: 1700, irisxe: 2000
+    intelhd4000: 700, intelhd4600: 900, intelhd520: 1000, intelhd530: 1200, intelhd620: 1300, intelhd630: 1700, uhd620: 1400, uhd630: 1700, irisxe: 2000
   };
 
   function gpuKey(raw) {
@@ -63,7 +63,11 @@ var HW = (function () {
   }
   function gpuScore(raw) {
     var k = gpuKey(raw);
-    return (k && GPU[k]) ? GPU[k] : null;
+    if (!k || !GPU[k]) return null;
+    var n = norm(raw), v = GPU[k];
+    if (/max-?q/.test(n)) return Math.round(v * 0.65);
+    if (/laptop|notebook|mobile|\bmx\d|\(m\)/.test(n) || /\d{3,4}m\b/.test(n)) return Math.round(v * 0.75);
+    return v;
   }
 
   // ------------------------------------------------------------------ CPU
@@ -119,24 +123,27 @@ var HW = (function () {
     if ((m = /\bi([3579])[\s-]?(\d{3,5})([a-z]{0,2})(?![a-z0-9])/.exec(s))) {
       var tier = m[1], digits = m[2], suf = m[3].replace(/^s$/, "");
       var gen = digits.length === 3 ? 1 : (digits.length === 4 ? +digits.charAt(0) : +digits.slice(0, 2));
-      var kk = suf.replace(/f$/, "");
-      if (kk !== "" && kk !== "k" && kk !== "s") return null;     // T/U/H/X ... : different class, don't guess
+      var kk = suf.replace(/f$/, "").replace(/^ks$/, "k");
+      var mob = { t: 0.65, h: 0.8, hk: 0.9, hx: 0.95, u: 0.4, p: 0.6 }[kk];
+      if (kk !== "" && kk !== "k" && kk !== "s" && !mob) return null;   // X (HEDT), G-series... : don't guess
       var key = "i" + tier + "-" + digits + (kk === "k" ? "k" : "");
       if (IC_OVR[key]) return IC_OVR[key];
       v = IC[tier] && IC[tier][gen];
       if (!v) return null;
+      if (mob) return Math.round(v * mob);
       return Math.round(kk === "k" ? v * (gen >= 12 ? 1.28 : 1.12) : v);
     }
-    if ((m = /ryzen\s?([3579])\s?(?:pro\s)?(\d{4})\s?(x3d|xt|x|gt|ge|g|f)?(?![a-z0-9])/.exec(s))) {
+    if ((m = /ryzen\s?([3579])\s?(?:pro\s)?(\d{4})\s?(hx3d|hx|hs|h|x3d|xt|x|gt|ge|g|f|u|e)?(?![a-z0-9])/.exec(s))) {
       var rs = m[3] || "";
-      if (rs === "ge") return null;
       var rk = m[1] + "-" + m[2] + rs;
       if (RZ_OVR[rk]) return RZ_OVR[rk];
+      var rmob = { h: 0.75, hs: 0.7, hx: 0.95, hx3d: 1.0, u: 0.45, e: 0.5, ge: 0.7 }[rs];
       var base = RZ[m[1]] && RZ[m[1]][+m[2].charAt(0)];
       if (!base) return null;
       if (rs === "x" || rs === "xt") base *= 1.06;
       if (rs === "x3d") base *= 1.1;
       if (rs === "g" || rs === "gt") base *= 0.88;
+      if (rmob) base *= rmob;
       return Math.round(base);
     }
     if ((m = /\bfx[\s-]?(\d)(\d{3})\b/.exec(s))) return { 4: 3500, 6: 5000, 8: 6800, 9: 7500 }[m[1]] || null;
@@ -155,7 +162,14 @@ var HW = (function () {
     return out;
   }
   // lenient threshold: you pass if you reach the weakest of the listed alternatives
-  function reqMin(list, fn) { var a = scoreList(list, fn); return a.length ? Math.min.apply(null, a) : null; }
+  // (an outlier far below the others, e.g. "or Intel HD 630" next to GTX 660, is ignored)
+  function reqMin(list, fn) {
+    var a = scoreList(list, fn);
+    if (!a.length) return null;
+    var hi = Math.max.apply(null, a);
+    a = a.filter(function (v) { return v >= hi * 0.5; });
+    return Math.min.apply(null, a);
+  }
   function reqMean(list, fn) {
     var a = scoreList(list, fn); if (!a.length) return null;
     var p = 0; for (var i = 0; i < a.length; i++) p += Math.log(a[i]);
@@ -180,10 +194,9 @@ var HW = (function () {
     return Math.exp(p / ks.length);
   }
   // reqs: {min:{cpu:[],gpu:[]}, rec:{cpu:[],gpu:[]}}; returns {"1080p":{low,medium,high,ultra},...} or null
-  function estimateFps(reqs, myCpu, myGpu) {
+  function estimateFps(reqs, mc, mg) {   // mc / mg: your CPU / GPU scores (numbers)
     var gMin = reqMean(reqs.min.gpu, gpuScore), gRec = reqMean(reqs.rec.gpu, gpuScore);
     var cMin = reqMean(reqs.min.cpu, cpuScore), cRec = reqMean(reqs.rec.cpu, cpuScore);
-    var mg = gpuScore(myGpu), mc = cpuScore(myCpu);
     if (!mg || (!gMin && !gRec)) return null;
     var kg = anchorK(gMin, gRec, 30 / PRESET.low, 60);          // min -> 30 fps @1080p low; rec -> 60 fps @1080p high
     var kc = (mc && (cMin || cRec)) ? anchorK(cMin, cRec, 30, 60) : null;
